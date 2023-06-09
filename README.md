@@ -14,8 +14,6 @@ git clone --recurssive https://github.com/Deftones565/cppSynth
 
 ## Dependencies
 
-Before running the C++ Synth project, make sure you have the following dependencies installed on your system:
-
 ### Debian-based distributions (e.g., Ubuntu, Debian)
 
 ```bash
