@@ -5,6 +5,9 @@
 # Make bin folder
 mkdir bin
 
+#version
+version="v0.1.1-alpha"
+
 # Compile the C++ code
 g++ -std=c++11 \
     src/main.cpp \
@@ -13,7 +16,7 @@ g++ -std=c++11 \
     ./lib/imgui/*.cpp \
     ./lib/imgui/backends/imgui_impl_glfw.cpp \
     ./lib/imgui/backends/imgui_impl_opengl3.cpp \
-    -o ./bin/synth \
+    -o ./bin/synth$version \
     -I./lib/imgui \
     -I./lib/imgui/backends \
     -I./lib \
