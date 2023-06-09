@@ -2,6 +2,9 @@
 
 # Script to compile the C++ Synth project
 
+# Make bin folder
+mkdir bin
+
 # Compile the C++ code
 g++ -std=c++11 \
     src/main.cpp \
