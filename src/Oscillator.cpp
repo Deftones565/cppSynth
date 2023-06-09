@@ -96,10 +96,10 @@ void Oscillator::setFrequency(double frequency) {
 // Function to generate a square waveform
 void Oscillator::updateSquareWaveTable() {
     for (unsigned i = 0; i < squareWaveTable.size(); ++i) {
-        // Harmonic synthesis
         double angle = (double)i / (double)squareWaveTable.size();
         double value = 0.0;
-        for (unsigned h = 1; h <= sampleRate / (2 * frequency); ++h) {
+        for (unsigned n = 0; n <= MAX_HARMONICS; ++n) {
+            unsigned h = 2 * n + 1; // Generate odd harmonics only
             value += sin(2.0 * PI * h * angle) / h;
         }
         squareWaveTable[i] = value * (4.0 / PI);
@@ -137,11 +137,9 @@ void Oscillator::setVolume(double volume) {
 
 // Function to generate the next value in the waveform
 double Oscillator::getWaveformValue() {
-    // Update position in the wave
     double advance = frequency / sampleRate;
     currentPosition = fmod(currentPosition + advance, 1.0);
 
-    // Interpolate to get a more accurate waveform value
     double position = currentPosition * activeWaveTable->size();
     unsigned index = (unsigned)position;
     double fraction = position - index;
