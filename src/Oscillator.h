@@ -10,6 +10,13 @@ class Oscillator {
 public:
     Oscillator(unsigned tableSize, double sampleRate);
 
+    // Explicitly define copy and move constructors/assignments to ensure
+    // the active waveform pointer always refers to this object's tables
+    Oscillator(const Oscillator& other);
+    Oscillator& operator=(const Oscillator& other);
+    Oscillator(Oscillator&& other) noexcept;
+    Oscillator& operator=(Oscillator&& other) noexcept;
+
     void setWaveform(const std::string& waveform);
     void setFrequency(double frequency);
     void setNote(int note);
@@ -28,6 +35,9 @@ private:
 
     void normalizeAmplitude(std::vector<double>& waveform);
     void applyWindow(std::vector<double>& waveform, const std::vector<double>& window);
+
+    // Helper used by copy/move operations to set the active table pointer
+    void copyActiveWaveTable(const Oscillator& other);
 
     std::vector<double> sineWaveTable;
     std::vector<double> squareWaveTable;
