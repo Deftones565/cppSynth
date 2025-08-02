@@ -5,7 +5,7 @@ This is a hobby project to learn more about C++, it's a synth that can output si
 You select the waveform from the dropdown box, Up arrow and down arrow change the octaves. A-; on the keyboard for the notes.
 It uses the MIDI standard.
 
-The UI now also provides basic recording controls. You can record your playing, play it back, and enable looping for continuous playback.
+The UI now provides separate loop controls. You can record your playing, set the tempo and number of beats for the loop, play it back, and enable looping for continuous playback. The synth is now polyphonic so multiple keys may be held at once.
 
 ## Clone
 
@@ -40,4 +40,3 @@ sudo pacman -Syu libxinerama libxcursor libxi libxrandr
 # TODO
 
 * Add visual boxes for viewing the waveforms.
-* Add more voices, right now it's mono.

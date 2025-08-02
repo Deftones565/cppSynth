@@ -13,24 +13,21 @@
 #include <GL/glew.h>    // Initialize with glewInit()
 #include <GLFW/glfw3.h>
 
-#include "Oscillator.h"
 #include "Keyboard.h"
 
 #define SAMPLE_RATE 48000
 #define FRAMES_PER_BUFFER 1024
 #define TABLE_SIZE 200
 
-// Keeps track of the previous key states on the keyboard so I can only have sound playing when key is pressed and unpressed
-bool keysDownPrev[512] = { false };
-
 // Waveform selection shared between threads
 std::string waveformName = "sine";
 
-// Mutex for protecting access to waveformName
+// Mutex for protecting access to waveformName and voices
 std::mutex waveformMutex;
+std::mutex voicesMutex;
 
-// Oscillator instance
-Oscillator osc(TABLE_SIZE, SAMPLE_RATE);
+// Active voices for polyphony
+std::vector<Voice> voices;
 
 // Flag to control audio thread
 std::atomic<bool> audioRunning(true);
@@ -48,6 +45,8 @@ std::atomic<bool> isRecording(false);
 std::atomic<bool> isPlaying(false);
 std::atomic<bool> isLooping(false);
 size_t playIndex = 0;
+std::atomic<int> beatsPerLoop(4);
+std::atomic<float> bpm(120.0f);
 
 static int patestCallback( const void *inputBuffer, void *outputBuffer,
                            unsigned long framesPerBuffer,
@@ -68,12 +67,13 @@ static int patestCallback( const void *inputBuffer, void *outputBuffer,
     std::lock_guard<std::mutex> lock(recordMutex);
     bool recording = isRecording.load();
     bool playing = isPlaying.load();
+    size_t maxSamples = static_cast<size_t>((60.0f / bpm.load()) * beatsPerLoop.load() * SAMPLE_RATE);
 
     for( i=0; i<framesPerBuffer; i++ )
     {
         float value = 0.0f;
         if (playing && playIndex < recordedSamples.size()) {
-            value = recordedSamples[playIndex++];
+            value += recordedSamples[playIndex++];
             if (playIndex >= recordedSamples.size()) {
                 if (isLooping.load()) {
                     playIndex = 0;
@@ -82,10 +82,19 @@ static int patestCallback( const void *inputBuffer, void *outputBuffer,
                     playIndex = 0;
                 }
             }
-        } else {
-            value = osc.getWaveformValue();
+        }
+
+        {
+            std::lock_guard<std::mutex> vlock(voicesMutex);
+            for (auto &v : voices) {
+                value += static_cast<float>(v.osc.getWaveformValue());
+            }
             if (recording) {
-                recordedSamples.push_back(value);
+                if (recordedSamples.size() < maxSamples) {
+                    recordedSamples.push_back(value);
+                } else {
+                    isRecording = false;
+                }
             }
         }
 
@@ -98,7 +107,7 @@ static int patestCallback( const void *inputBuffer, void *outputBuffer,
 }
 
 
-void audioThread(std::atomic<bool>& keyPressed, std::string& waveform)
+void audioThread()
 {
     PaStreamParameters outputParameters;
     PaStream *stream;
@@ -129,15 +138,7 @@ void audioThread(std::atomic<bool>& keyPressed, std::string& waveform)
 
     while (audioRunning)
     {
-        if (!keyPressed)
-        {
-            osc.setWaveform("none");
-        }
-        else
-        {
-            osc.setWaveform(waveform);
-        }
-        Pa_Sleep(1);
+        Pa_Sleep(10);
     }
 
     err = Pa_StopStream( stream );
@@ -172,7 +173,7 @@ int main()
     ImGui_ImplOpenGL3_Init();
 
     // Start audio processing in a separate thread
-        std::thread audio(audioThread, std::ref(keyPressed), std::ref(waveformName));
+    std::thread audio(audioThread);
 
     // Main loop
     while (!glfwWindowShouldClose(window))
@@ -183,8 +184,8 @@ int main()
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
-        Keyboard(window, osc, keyPressed);
-	glfwSetKeyCallback(window, key_callback);
+        Keyboard(window, voices, voicesMutex, keyPressed, waveformName);
+        glfwSetKeyCallback(window, key_callback);
 
         {
             ImGui::Begin("SynthWave Oscillator");
@@ -195,9 +196,27 @@ int main()
             if(ImGui::Combo("waveform", &currentItem, items, IM_ARRAYSIZE(items))) {
                 std::lock_guard<std::mutex> lock(waveformMutex);
                 waveformName = items[currentItem];
+                std::lock_guard<std::mutex> vlock(voicesMutex);
+                for (auto &v : voices) {
+                    v.osc.setWaveform(waveformName);
+                }
             }
+            ImGui::End();
+        }
 
+        {
+            ImGui::Begin("Loop Controls");
+            int beats = beatsPerLoop.load();
+            float bpmVal = bpm.load();
+            if (ImGui::InputInt("Beats", &beats)) {
+                if (beats < 1) beats = 1;
+                beatsPerLoop = beats;
+            }
+            if (ImGui::SliderFloat("BPM", &bpmVal, 40.0f, 240.0f)) {
+                bpm = bpmVal;
+            }
             ImGui::Separator();
+            size_t maxSamples = static_cast<size_t>((60.0f / bpmVal) * beats * SAMPLE_RATE);
             if (!isRecording.load()) {
                 if (ImGui::Button("Start Recording")) {
                     std::lock_guard<std::mutex> lock(recordMutex);
@@ -207,8 +226,12 @@ int main()
                     isRecording = true;
                 }
             } else {
+                ImGui::Text("Recording...");
                 if (ImGui::Button("Stop Recording")) {
                     isRecording = false;
+                    if (recordedSamples.size() < maxSamples) {
+                        recordedSamples.resize(maxSamples, 0.0f);
+                    }
                 }
             }
 
@@ -231,7 +254,6 @@ int main()
             if (ImGui::Checkbox("Loop", &loop)) {
                 isLooping = loop;
             }
-
             ImGui::End();
         }
 
