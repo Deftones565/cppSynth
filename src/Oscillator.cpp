@@ -99,7 +99,8 @@ void Oscillator::updateSquareWaveTable() {
         // Harmonic synthesis
         double angle = (double)i / (double)squareWaveTable.size();
         double value = 0.0;
-        for (unsigned h = 1; h <= sampleRate / (2 * frequency); ++h) {
+        // Square waves are comprised of the odd harmonics only
+        for (unsigned h = 1; h <= sampleRate / (2 * frequency); h += 2) {
             value += sin(2.0 * PI * h * angle) / h;
         }
         squareWaveTable[i] = value * (4.0 / PI);
@@ -168,11 +169,18 @@ double Oscillator::getWaveformValue() {
 
 // Function to normalize the amplitude of the waveform to 1
 void Oscillator::normalizeAmplitude(std::vector<double>& waveform) {
-    double maxAmplitude = *std::max_element(waveform.begin(), waveform.end());
-    double scalingFactor = 1.0 / maxAmplitude;
+    // Determine the largest magnitude sample
+    double maxAmplitude = 0.0;
+    for (const double& sample : waveform) {
+        maxAmplitude = std::max(maxAmplitude, std::abs(sample));
+    }
 
-    for (double& sample : waveform) {
-        sample *= scalingFactor;
+    // Avoid division by zero for silent waveforms
+    if (maxAmplitude > 0.0) {
+        double scalingFactor = 1.0 / maxAmplitude;
+        for (double& sample : waveform) {
+            sample *= scalingFactor;
+        }
     }
 }
 
