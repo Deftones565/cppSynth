@@ -5,6 +5,8 @@ This is a hobby project to learn more about C++, it's a synth that can output si
 You select the waveform from the dropdown box, Up arrow and down arrow change the octaves. A-; on the keyboard for the notes.
 It uses the MIDI standard.
 
+The UI now also provides basic recording controls. You can record your playing, play it back, and enable looping for continuous playback.
+
 ## Clone
 
 ```bash

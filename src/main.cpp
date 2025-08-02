@@ -4,6 +4,7 @@
 #include <thread>
 #include <atomic>
 #include <mutex>
+#include <vector>
 
 // ImGui includes
 #include <imgui.h>
@@ -40,6 +41,14 @@ std::atomic<bool> keyPressed(false);
 // Volume stuff I guess
 std::atomic<float> volume(1.0);
 
+// Recording and playback state
+std::vector<float> recordedSamples;
+std::mutex recordMutex;
+std::atomic<bool> isRecording(false);
+std::atomic<bool> isPlaying(false);
+std::atomic<bool> isLooping(false);
+size_t playIndex = 0;
+
 static int patestCallback( const void *inputBuffer, void *outputBuffer,
                            unsigned long framesPerBuffer,
                            const PaStreamCallbackTimeInfo* timeInfo,
@@ -56,9 +65,31 @@ static int patestCallback( const void *inputBuffer, void *outputBuffer,
     // Get the current volume value
     float vol = volume.load();
 
+    std::lock_guard<std::mutex> lock(recordMutex);
+    bool recording = isRecording.load();
+    bool playing = isPlaying.load();
+
     for( i=0; i<framesPerBuffer; i++ )
     {
-        float value = osc.getWaveformValue();
+        float value = 0.0f;
+        if (playing && playIndex < recordedSamples.size()) {
+            value = recordedSamples[playIndex++];
+            if (playIndex >= recordedSamples.size()) {
+                if (isLooping.load()) {
+                    playIndex = 0;
+                } else {
+                    isPlaying = false;
+                    playIndex = 0;
+                }
+            }
+        } else {
+            value = osc.getWaveformValue();
+            if (recording) {
+                recordedSamples.push_back(value);
+            }
+        }
+
+        value *= vol;
         *out++ = value;  /* left */
         *out++ = value;  /* right */
     }
@@ -164,6 +195,41 @@ int main()
             if(ImGui::Combo("waveform", &currentItem, items, IM_ARRAYSIZE(items))) {
                 std::lock_guard<std::mutex> lock(waveformMutex);
                 waveformName = items[currentItem];
+            }
+
+            ImGui::Separator();
+            if (!isRecording.load()) {
+                if (ImGui::Button("Start Recording")) {
+                    std::lock_guard<std::mutex> lock(recordMutex);
+                    recordedSamples.clear();
+                    playIndex = 0;
+                    isPlaying = false;
+                    isRecording = true;
+                }
+            } else {
+                if (ImGui::Button("Stop Recording")) {
+                    isRecording = false;
+                }
+            }
+
+            if (!isPlaying.load()) {
+                if (ImGui::Button("Play")) {
+                    std::lock_guard<std::mutex> lock(recordMutex);
+                    playIndex = 0;
+                    if (!recordedSamples.empty()) {
+                        isPlaying = true;
+                    }
+                }
+            } else {
+                if (ImGui::Button("Stop")) {
+                    isPlaying = false;
+                    playIndex = 0;
+                }
+            }
+
+            bool loop = isLooping.load();
+            if (ImGui::Checkbox("Loop", &loop)) {
+                isLooping = loop;
             }
 
             ImGui::End();
