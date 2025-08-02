@@ -327,17 +327,20 @@ int main()
                     }
                 }
 
-                ImGui::SetCursorScreenPos(rectMin);
-                ImGui::InvisibleButton(("track" + std::to_string(idx)).c_str(), ImVec2(trackWidth, trackHeight - 10));
-                if (ImGui::IsItemActive() && ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
-                    float delta = ImGui::GetIO().MouseDelta.x;
-                    float deltaSeconds = delta / timelineWidth * maxLength;
-                    inst.offsetSeconds = std::max(0.0f, inst.offsetSeconds + deltaSeconds);
-                    draggedTrack = (int)idx;
-                }
-                if (draggedTrack == (int)idx && !ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
-                    inst.offsetSeconds = std::round(inst.offsetSeconds / snap) * snap;
-                    draggedTrack = -1;
+                if (trackWidth > 0.0f)
+                {
+                    ImGui::SetCursorScreenPos(rectMin);
+                    ImGui::InvisibleButton(("track" + std::to_string(idx)).c_str(), ImVec2(trackWidth, trackHeight - 10));
+                    if (ImGui::IsItemActive() && ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
+                        float delta = ImGui::GetIO().MouseDelta.x;
+                        float deltaSeconds = delta / timelineWidth * maxLength;
+                        inst.offsetSeconds = std::max(0.0f, inst.offsetSeconds + deltaSeconds);
+                        draggedTrack = (int)idx;
+                    }
+                    if (draggedTrack == (int)idx && !ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+                        inst.offsetSeconds = std::round(inst.offsetSeconds / snap) * snap;
+                        draggedTrack = -1;
+                    }
                 }
             }
             ImGui::Dummy(ImVec2(timelineWidth, totalHeight));
