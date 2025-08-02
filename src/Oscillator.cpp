@@ -4,6 +4,7 @@
 #include <stdexcept>
 #include <iostream>
 #include <algorithm>
+#include <random>
 
 // Define maximum number of harmonics for waveforms
 #define MAX_HARMONICS 500
@@ -17,6 +18,7 @@ Oscillator::Oscillator(unsigned tableSize, double sampleRate)
     squareWaveTable.resize(tableSize);
     sawtoothWaveTable.resize(tableSize);
     triangleWaveTable.resize(tableSize);
+    noiseWaveTable.resize(tableSize);
     silentWaveTable.resize(tableSize, 0.0); // Silent wave is just zeros
 
     frequency = 440.0;  // Set the default frequency 
@@ -26,6 +28,7 @@ Oscillator::Oscillator(unsigned tableSize, double sampleRate)
     updateSquareWaveTable();
     updateSawtoothWaveTable();
     updateTriangleWaveTable();
+    updateNoiseWaveTable();
 
     activeWaveTable = &sineWaveTable;  // Default wave form is sine
     currentPosition = 0.0;  // Reset current position
@@ -57,6 +60,16 @@ void Oscillator::updateTriangleWaveTable() {
     }
 }
 
+// Function to generate white noise values
+void Oscillator::updateNoiseWaveTable() {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<double> dist(-1.0, 1.0);
+    for (double &sample : noiseWaveTable) {
+        sample = dist(gen);
+    }
+}
+
 // Function to set the waveform type
 void Oscillator::setWaveform(const std::string& waveform) {
     // Switch the active waveform based on input string
@@ -71,6 +84,9 @@ void Oscillator::setWaveform(const std::string& waveform) {
     }
     else if (waveform == "triangle") {
         activeWaveTable = &triangleWaveTable;
+    }
+    else if (waveform == "noise") {
+        activeWaveTable = &noiseWaveTable;
     }
     else if (waveform == "none") {
         activeWaveTable = &silentWaveTable;

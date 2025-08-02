@@ -22,6 +22,7 @@ private:
     void updateSquareWaveTable();
     void updateSawtoothWaveTable();
     void updateTriangleWaveTable();
+    void updateNoiseWaveTable();
 
     double noteToFrequency(int note);
 
@@ -32,6 +33,7 @@ private:
     std::vector<double> squareWaveTable;
     std::vector<double> sawtoothWaveTable;
     std::vector<double> triangleWaveTable;
+    std::vector<double> noiseWaveTable;
     std::vector<double> silentWaveTable;
 
     std::vector<double>* activeWaveTable;

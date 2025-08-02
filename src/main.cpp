@@ -159,7 +159,7 @@ int main()
             ImGui::Begin("SynthWave Oscillator");
 
             ImGui::Text("Select the waveform");
-            const char* items[] = { "sine", "square", "sawtooth", "triangle" };
+            const char* items[] = { "sine", "square", "sawtooth", "triangle", "noise" };
             static int currentItem = 0;
             if(ImGui::Combo("waveform", &currentItem, items, IM_ARRAYSIZE(items))) {
                 std::lock_guard<std::mutex> lock(waveformMutex);
