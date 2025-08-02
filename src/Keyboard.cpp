@@ -1,47 +1,61 @@
 #include "imgui.h"
 #include "Keyboard.h"
-#include "Oscillator.h"
 #include <GLFW/glfw3.h>
+#include <algorithm>
+
+// Constants for constructing voices
+static const unsigned kTableSize = 200;
+static const double kSampleRate = 48000.0;
 
 int octave = 0;
 
-void Keyboard(GLFWwindow* window, Oscillator& oscillator, std::atomic<bool>& keyPressed) {
-    ImGuiIO& io = ImGui::GetIO();
-    
-    // Process key press event
-    glfwPollEvents();
-    for (int i = 0; i < GLFW_KEY_LAST; i++) {
-        if (glfwGetKey(window, i) == GLFW_PRESS) {
-            keyPressed = true;
-            switch (i) {
-                // note keys
-                case GLFW_KEY_A: oscillator.setNote(60 + octave * 12); break; // C4
-                case GLFW_KEY_S: oscillator.setNote(62 + octave * 12); break; // D4
-                case GLFW_KEY_D: oscillator.setNote(64 + octave * 12); break; // E4
-                case GLFW_KEY_F: oscillator.setNote(65 + octave * 12); break; // F4
-                case GLFW_KEY_G: oscillator.setNote(67 + octave * 12); break; // G4
-                case GLFW_KEY_H: oscillator.setNote(69 + octave * 12); break; // A4
-                case GLFW_KEY_J: oscillator.setNote(71 + octave * 12); break; // B4
-                case GLFW_KEY_K: oscillator.setNote(72 + octave * 12); break; // C5
-                case GLFW_KEY_L: oscillator.setNote(74 + octave * 12); break; // D5
-                case GLFW_KEY_SEMICOLON: oscillator.setNote(76 + octave * 12); break; // E5
+// Map of keys to MIDI notes for one octave starting at C4
+struct KeyMap { int key; int note; };
+static const KeyMap keyMap[] = {
+    {GLFW_KEY_A, 60}, // C4
+    {GLFW_KEY_S, 62}, // D4
+    {GLFW_KEY_D, 64}, // E4
+    {GLFW_KEY_F, 65}, // F4
+    {GLFW_KEY_G, 67}, // G4
+    {GLFW_KEY_H, 69}, // A4
+    {GLFW_KEY_J, 71}, // B4
+    {GLFW_KEY_K, 72}, // C5
+    {GLFW_KEY_L, 74}, // D5
+    {GLFW_KEY_SEMICOLON, 76} // E5
+};
 
-	    }
+void Keyboard(GLFWwindow* window, std::vector<Voice>& voices, std::mutex& voiceMutex,
+              std::atomic<bool>& keyPressed, const std::string& waveform) {
+    static bool keysDownPrev[GLFW_KEY_LAST] = {false};
+
+    glfwPollEvents();
+
+    for (const auto& km : keyMap) {
+        bool isDown = glfwGetKey(window, km.key) == GLFW_PRESS;
+        bool wasDown = keysDownPrev[km.key];
+        int note = km.note + octave * 12;
+
+        if (isDown && !wasDown) {
+            Voice v(kTableSize, kSampleRate);
+            v.note = note;
+            v.osc.setWaveform(waveform);
+            v.osc.setNote(note);
+            std::lock_guard<std::mutex> lock(voiceMutex);
+            voices.push_back(std::move(v));
+            keysDownPrev[km.key] = true;
+        }
+        if (!isDown && wasDown) {
+            std::lock_guard<std::mutex> lock(voiceMutex);
+            voices.erase(std::remove_if(voices.begin(), voices.end(),
+                                        [note](const Voice& v){ return v.note == note; }),
+                          voices.end());
+            keysDownPrev[km.key] = false;
         }
     }
-    
-    // Process key release event
-    if (!glfwGetKey(window, GLFW_KEY_A) &&
-        !glfwGetKey(window, GLFW_KEY_S) &&
-        !glfwGetKey(window, GLFW_KEY_D) &&
-        !glfwGetKey(window, GLFW_KEY_F) &&
-        !glfwGetKey(window, GLFW_KEY_G) &&
-        !glfwGetKey(window, GLFW_KEY_H) &&
-        !glfwGetKey(window, GLFW_KEY_J) &&
-        !glfwGetKey(window, GLFW_KEY_K) &&
-        !glfwGetKey(window, GLFW_KEY_L) &&
-        !glfwGetKey(window, GLFW_KEY_SEMICOLON)) {
-        keyPressed = false;
+
+    {
+        std::lock_guard<std::mutex> lock(voiceMutex);
+        keyPressed = !voices.empty();
     }
 }
 
@@ -54,5 +68,3 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         }
     }
 }
-
-
