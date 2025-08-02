@@ -11,7 +11,7 @@
 
 // Oscillator constructor
 Oscillator::Oscillator(unsigned tableSize, double sampleRate)
-    : sampleRate(sampleRate), frequency(0.0), currentPosition(0.0), volume(1.0) 
+    : sampleRate(sampleRate), frequency(0.0), currentPosition(0.0), volume(1.0)
 {
     // Resize wave tables based on input tableSize
     sineWaveTable.resize(tableSize);
@@ -32,6 +32,98 @@ Oscillator::Oscillator(unsigned tableSize, double sampleRate)
 
     activeWaveTable = &sineWaveTable;  // Default wave form is sine
     currentPosition = 0.0;  // Reset current position
+}
+
+// Copy constructor
+Oscillator::Oscillator(const Oscillator& other)
+    : sineWaveTable(other.sineWaveTable),
+      squareWaveTable(other.squareWaveTable),
+      sawtoothWaveTable(other.sawtoothWaveTable),
+      triangleWaveTable(other.triangleWaveTable),
+      noiseWaveTable(other.noiseWaveTable),
+      silentWaveTable(other.silentWaveTable),
+      sampleRate(other.sampleRate),
+      frequency(other.frequency),
+      currentPosition(other.currentPosition),
+      volume(other.volume)
+{
+    copyActiveWaveTable(other);
+}
+
+// Copy assignment
+Oscillator& Oscillator::operator=(const Oscillator& other)
+{
+    if (this != &other) {
+        sineWaveTable   = other.sineWaveTable;
+        squareWaveTable = other.squareWaveTable;
+        sawtoothWaveTable = other.sawtoothWaveTable;
+        triangleWaveTable = other.triangleWaveTable;
+        noiseWaveTable  = other.noiseWaveTable;
+        silentWaveTable = other.silentWaveTable;
+
+        sampleRate = other.sampleRate;
+        frequency = other.frequency;
+        currentPosition = other.currentPosition;
+        volume = other.volume;
+
+        copyActiveWaveTable(other);
+    }
+    return *this;
+}
+
+// Move constructor
+Oscillator::Oscillator(Oscillator&& other) noexcept
+    : sineWaveTable(std::move(other.sineWaveTable)),
+      squareWaveTable(std::move(other.squareWaveTable)),
+      sawtoothWaveTable(std::move(other.sawtoothWaveTable)),
+      triangleWaveTable(std::move(other.triangleWaveTable)),
+      noiseWaveTable(std::move(other.noiseWaveTable)),
+      silentWaveTable(std::move(other.silentWaveTable)),
+      sampleRate(other.sampleRate),
+      frequency(other.frequency),
+      currentPosition(other.currentPosition),
+      volume(other.volume)
+{
+    copyActiveWaveTable(other);
+}
+
+// Move assignment
+Oscillator& Oscillator::operator=(Oscillator&& other) noexcept
+{
+    if (this != &other) {
+        sineWaveTable   = std::move(other.sineWaveTable);
+        squareWaveTable = std::move(other.squareWaveTable);
+        sawtoothWaveTable = std::move(other.sawtoothWaveTable);
+        triangleWaveTable = std::move(other.triangleWaveTable);
+        noiseWaveTable  = std::move(other.noiseWaveTable);
+        silentWaveTable = std::move(other.silentWaveTable);
+
+        sampleRate = other.sampleRate;
+        frequency = other.frequency;
+        currentPosition = other.currentPosition;
+        volume = other.volume;
+
+        copyActiveWaveTable(other);
+    }
+    return *this;
+}
+
+// Helper to map active table pointer after copy/move
+void Oscillator::copyActiveWaveTable(const Oscillator& other)
+{
+    if (other.activeWaveTable == &other.sineWaveTable) {
+        activeWaveTable = &sineWaveTable;
+    } else if (other.activeWaveTable == &other.squareWaveTable) {
+        activeWaveTable = &squareWaveTable;
+    } else if (other.activeWaveTable == &other.sawtoothWaveTable) {
+        activeWaveTable = &sawtoothWaveTable;
+    } else if (other.activeWaveTable == &other.triangleWaveTable) {
+        activeWaveTable = &triangleWaveTable;
+    } else if (other.activeWaveTable == &other.noiseWaveTable) {
+        activeWaveTable = &noiseWaveTable;
+    } else {
+        activeWaveTable = &silentWaveTable;
+    }
 }
 
 // Function to generate a sine waveform
