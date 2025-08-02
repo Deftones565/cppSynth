@@ -1,6 +1,6 @@
 # cppSynth
 
-This is a hobby project to learn more about C++, it's a synth that can output sine, square, sawtooth and triangle.
+This is a hobby project to learn more about C++, it's a synth that can output sine, square, sawtooth, triangle and noise.
 
 You select the waveform from the dropdown box, Up arrow and down arrow change the octaves. A-; on the keyboard for the notes.
 It uses the MIDI standard.
